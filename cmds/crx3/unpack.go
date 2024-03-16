@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/imishinist/go-crx3"
-	"io"
 	"os"
+
+	"github.com/imishinist/go-crx3"
 )
 
 func unpack(outputTo string, crxFile string) error {
@@ -21,13 +21,9 @@ func unpack(outputTo string, crxFile string) error {
 	}
 	defer dest.Close()
 
-	if _, err = crx3.ExtractHeader(file); err != nil {
+	if err := crx3.VerifyAndExtract(dest, file); err != nil {
 		return err
 	}
-	if _, err = io.Copy(dest, file); err != nil {
-		return err
-	}
-
 	return nil
 }
 

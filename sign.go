@@ -88,20 +88,25 @@ func generateHeader(data io.ReadSeeker, key *rsa.PrivateKey) ([]byte, error) {
 }
 
 func sign(r io.Reader, signedData []byte, pk *rsa.PrivateKey) ([]byte, error) {
+	hashed, err := hashSignedData(r, signedData)
+	if err != nil {
+		return nil, err
+	}
+
+	return rsa.SignPKCS1v15(rand.Reader, pk, crypto.SHA256, hashed)
+}
+
+func hashSignedData(r io.Reader, signedData []byte) ([]byte, error) {
 	sign := sha256.New()
-	// magic
 	sign.Write([]byte("CRX3 SignedData\x00"))
 
-	// signed data
 	if err := binary.Write(sign, binary.LittleEndian, uint32(len(signedData))); err != nil {
 		return nil, err
 	}
 	sign.Write(signedData)
 
-	// body
 	if _, err := io.Copy(sign, r); err != nil {
 		return nil, err
 	}
-
-	return rsa.SignPKCS1v15(rand.Reader, pk, crypto.SHA256, sign.Sum(nil))
+	return sign.Sum(nil), nil
 }
