@@ -2,53 +2,54 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
-
-	"github.com/imishinist/go-crx3"
+	"sort"
 )
 
-func pack(outputTo, zipFile, keyFile string) error {
-	file, err := os.Open(zipFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	key, err := crx3.LoadPrivateKey(keyFile)
-	if err != nil {
-		return err
-	}
-
-	dest, err := os.OpenFile(outputTo, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer dest.Close()
-
-	if err := crx3.SignTo(dest, file, key); err != nil {
-		return err
-	}
-	return nil
-}
-
 func main() {
-	var (
-		outputTo string
-		zipFile  string
-		keyFile  string
-	)
-	flag.StringVar(&outputTo, "output", "", "output file")
-	flag.StringVar(&zipFile, "zip", "", "zip file to sign")
-	flag.StringVar(&keyFile, "key", "", "key file to sign")
-
-	flag.Parse()
-	if outputTo == "" || zipFile == "" || keyFile == "" {
-		flag.Usage()
-		return
+	commands := map[string]command{
+		"pack": packCmd(),
 	}
 
-	if err := pack(outputTo, zipFile, keyFile); err != nil {
+	fs := flag.NewFlagSet("crx3", flag.ExitOnError)
+	fs.Usage = func() {
+		fmt.Fprintln(fs.Output(), "Usage: crx3 <command> [command flags]")
+		fmt.Fprintf(fs.Output(), "\nglobal flags: \n")
+		fs.PrintDefaults()
+
+		names := make([]string, 0, len(commands))
+		for name := range commands {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			if cmd := commands[name]; cmd.fs != nil {
+				fmt.Fprintf(fs.Output(), "\n%s command: \n", name)
+				cmd.fs.SetOutput(fs.Output())
+				cmd.fs.PrintDefaults()
+			}
+		}
+	}
+	fs.Parse(os.Args[1:])
+
+	args := fs.Args()
+	if len(args) == 0 {
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	cmd, ok := commands[args[0]]
+	if !ok {
+		log.Fatalf("Unknown command: %s", args[0])
+	}
+	if err := cmd.fn(args[1:]); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type command struct {
+	fs *flag.FlagSet
+	fn func(args []string) error
 }
