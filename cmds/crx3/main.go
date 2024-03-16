@@ -10,7 +10,8 @@ import (
 
 func main() {
 	commands := map[string]command{
-		"pack": packCmd(),
+		"pack":   packCmd(),
+		"unpack": unpackCmd(),
 	}
 
 	fs := flag.NewFlagSet("crx3", flag.ExitOnError)
