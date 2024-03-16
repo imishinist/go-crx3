@@ -11,6 +11,10 @@ import (
 	"strconv"
 )
 
+const (
+	crxIDLength = 16
+)
+
 func AppIDFromPrivateKey(key *rsa.PrivateKey) (string, error) {
 	publicKey, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
 	if err != nil {
@@ -22,7 +26,7 @@ func AppIDFromPrivateKey(key *rsa.PrivateKey) (string, error) {
 	hashed := hash.Sum(nil)
 
 	ret := ""
-	for _, b := range fmt.Sprintf("%x", hashed[0:16]) {
+	for _, b := range fmt.Sprintf("%x", hashed[0:crxIDLength]) {
 		n, _ := strconv.ParseInt(fmt.Sprintf("%c", b), 16, 32)
 		ret += fmt.Sprintf("%s", strconv.FormatInt(n+0x0a, 26))
 	}

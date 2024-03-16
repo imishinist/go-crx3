@@ -7,11 +7,21 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/binary"
+	"errors"
 	"io"
 
 	"github.com/imishinist/go-crx3/pb"
 
 	"google.golang.org/protobuf/proto"
+)
+
+const (
+	crxMagic        = "Cr24"
+	manifestVersion = 3
+)
+
+var (
+	ErrInvalidSignature = errors.New("invalid signature")
 )
 
 func SignTo(dest io.Writer, src io.ReadSeeker, key *rsa.PrivateKey) error {
@@ -26,10 +36,10 @@ func SignTo(dest io.Writer, src io.ReadSeeker, key *rsa.PrivateKey) error {
 	}
 
 	// write
-	if _, err := dest.Write([]byte("Cr24")); err != nil {
+	if _, err := dest.Write([]byte(crxMagic)); err != nil {
 		return err
 	}
-	if err := binary.Write(dest, binary.LittleEndian, uint32(3)); err != nil {
+	if err := binary.Write(dest, binary.LittleEndian, uint32(manifestVersion)); err != nil {
 		return err
 	}
 	if err := binary.Write(dest, binary.LittleEndian, uint32(len(header))); err != nil {
