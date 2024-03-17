@@ -16,6 +16,8 @@ func getAppIDFromCrx(crxFileName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer crxFile.Close()
+
 	header, err := crx3.SplitCrx(buf, crxFile)
 	if err != nil {
 		return "", err

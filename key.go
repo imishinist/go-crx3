@@ -75,6 +75,7 @@ func LoadPrivateKey(filename string) (*rsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	return ParsePrivateKey(file)
 }
