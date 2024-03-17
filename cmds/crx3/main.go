@@ -12,6 +12,7 @@ func main() {
 	commands := map[string]command{
 		"pack":   packCmd(),
 		"unpack": unpackCmd(),
+		"id":     idCmd(),
 	}
 
 	fs := flag.NewFlagSet("crx3", flag.ExitOnError)

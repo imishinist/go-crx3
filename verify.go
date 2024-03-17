@@ -1,6 +1,7 @@
 package crx3
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
@@ -16,29 +17,29 @@ const (
 	metadataSize = 12
 )
 
-func VerifyAndExtract(dest io.Writer, data io.ReadSeeker) error {
+func SplitCrx(dest io.Writer, crxData io.ReadSeeker) (*pb.CrxFileHeader, error) {
 	crx := make([]byte, metadataSize)
-	if _, err := io.ReadFull(data, crx); err != nil {
-		return err
+	if _, err := io.ReadFull(crxData, crx); err != nil {
+		return nil, err
 	}
 
 	// magic
 	magic := string(crx[0:4])
 	if magic != crxMagic {
-		return ErrInvalidSignature
+		return nil, ErrInvalidSignature
 	}
 
 	// manifest version
 	version := binary.LittleEndian.Uint32(crx[4:8])
 	if version != manifestVersion {
-		return ErrInvalidSignature
+		return nil, ErrInvalidSignature
 	}
 
 	// header size
 	headerSize := binary.LittleEndian.Uint32(crx[8:12])
 	headerBytes := make([]byte, headerSize)
-	if _, err := io.ReadFull(data, headerBytes); err != nil {
-		return err
+	if _, err := io.ReadFull(crxData, headerBytes); err != nil {
+		return nil, err
 	}
 
 	// unmarshal
@@ -47,25 +48,41 @@ func VerifyAndExtract(dest io.Writer, data io.ReadSeeker) error {
 		signedData pb.SignedData
 	)
 	if err := proto.Unmarshal(headerBytes, &header); err != nil {
-		return err
+		return nil, err
 	}
 	if err := proto.Unmarshal(header.SignedHeaderData, &signedData); err != nil {
-		return err
+		return nil, err
 	}
 
 	// verify
 	if len(signedData.CrxId) != crxIDLength {
-		return ErrInvalidSignature
+		return nil, ErrInvalidSignature
 	}
+
+	if _, err := io.Copy(dest, crxData); err != nil {
+		return nil, err
+	}
+
+	return &header, nil
+}
+
+func VerifyAndExtract(dest io.Writer, crxData io.ReadSeeker) error {
+	buf := new(bytes.Buffer)
+	header, err := SplitCrx(buf, crxData)
+	if err != nil {
+		return err
+	}
+
+	bufReader := bytes.NewReader(buf.Bytes())
 	for _, r := range header.Sha256WithRsa {
-		if err := verify(data, header.SignedHeaderData, r.PublicKey, r.Signature); err != nil {
+		if err := verify(buf, header.SignedHeaderData, r.PublicKey, r.Signature); err != nil {
 			return err
 		}
-		if _, err := data.Seek(metadataSize+int64(headerSize), io.SeekStart); err != nil {
+		if _, err := bufReader.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
 	}
-	if _, err := io.Copy(dest, data); err != nil {
+	if _, err := io.Copy(dest, bufReader); err != nil {
 		return err
 	}
 	return nil

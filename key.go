@@ -15,8 +15,8 @@ const (
 	crxIDLength = 16
 )
 
-func AppIDFromPrivateKey(key *rsa.PrivateKey) (string, error) {
-	publicKey, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+func AppIDFromPublicKey(key *rsa.PublicKey) (string, error) {
+	publicKey, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
 		return "", err
 	}
@@ -31,6 +31,10 @@ func AppIDFromPrivateKey(key *rsa.PrivateKey) (string, error) {
 		ret += fmt.Sprintf("%s", strconv.FormatInt(n+0x0a, 26))
 	}
 	return ret, nil
+}
+
+func AppIDFromPrivateKey(key *rsa.PrivateKey) (string, error) {
+	return AppIDFromPublicKey(&key.PublicKey)
 }
 
 func CrxIDFromPrivateKey(key *rsa.PrivateKey) ([]byte, error) {
