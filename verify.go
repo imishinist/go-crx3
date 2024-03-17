@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/imishinist/go-crx3/pb"
@@ -71,6 +72,16 @@ func VerifyAndExtract(dest io.Writer, crxData io.ReadSeeker) error {
 	header, err := SplitCrx(buf, crxData)
 	if err != nil {
 		return err
+	}
+
+	if len(header.Sha256WithRsa) == 0 {
+		return fmt.Errorf("RSA signature is not found")
+	}
+	if len(header.Sha256WithRsa) > 1 {
+		return fmt.Errorf("multiple RSA signature is not supported")
+	}
+	if len(header.Sha256WithEcdsa) > 0 {
+		return fmt.Errorf("ECDSA signature is not supported")
 	}
 
 	bufReader := bytes.NewReader(buf.Bytes())
