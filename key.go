@@ -1,6 +1,7 @@
 package crx3
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -14,6 +15,10 @@ import (
 const (
 	crxIDLength = 16
 )
+
+func GenerateNewKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(rand.Reader, 2048)
+}
 
 func AppIDFromPublicKey(key *rsa.PublicKey) (string, error) {
 	publicKey, err := x509.MarshalPKIXPublicKey(key)
